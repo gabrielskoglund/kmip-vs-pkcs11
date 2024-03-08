@@ -8,5 +8,5 @@ ssh -Nf -L "$XDG_RUNTIME_DIR"/p11-kit/pkcs11:/tmp/p11-server \
     -o StrictHostKeyChecking=no \
     hsm
 
-# Run the script
-python /experiment/main.py
+# Run the experiment, passing any arguments to this script along
+python /experiment/main.py "$@"

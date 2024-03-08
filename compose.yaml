@@ -9,3 +9,6 @@ services:
     build: ./ca
     depends_on:
       - hsm
+    # Arguments to be passed along to the experiment
+    # see ca/experiment/main.py for details
+    command: ${EXPERIMENT_ARGS}
