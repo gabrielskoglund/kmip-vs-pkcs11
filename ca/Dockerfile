@@ -5,6 +5,7 @@ RUN apt-get update \
         p11-kit \
         gnutls-bin \
         openssh-client \
+        iproute2 \
     && pip install cryptography python-pkcs11 \
     && mkdir /root/.ssh
 

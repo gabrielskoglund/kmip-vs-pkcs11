@@ -7,6 +7,8 @@ services:
       - "22"
   ca:
     build: ./ca
+    cap_add:
+      - NET_ADMIN
     depends_on:
       - hsm
     # Arguments to be passed along to the experiment

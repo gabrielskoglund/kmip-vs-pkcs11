@@ -58,6 +58,6 @@ class PKCS11(Protocol):
         def closure():
             self.private_key.sign(DATA)
 
-        time = timeit.timeit(closure, number=10_000, globals=globals())
-        self.log.info("Testing finished. Time for 10 000 signatures: %f", time)
-        self.log.info("Average time per signature: %f", time / 10_000)
+        time = timeit.timeit(closure, number=1000, globals=globals())
+        self.log.info("Testing finished. Time for 1000 signatures: %f", time)
+        self.log.info("Average time per signature: %f", time / 1000)
