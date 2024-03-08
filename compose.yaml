@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  hsm:
+    build: ./hsm
+    expose:
+      - "22"
+  ca:
+    build: ./ca
+    depends_on:
+      - hsm
