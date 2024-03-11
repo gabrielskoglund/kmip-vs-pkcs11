@@ -5,6 +5,7 @@ services:
     build: ./hsm
     expose:
       - "22"
+    command: ${EXPERIMENT_ARGS}
   ca:
     build: ./ca
     cap_add:

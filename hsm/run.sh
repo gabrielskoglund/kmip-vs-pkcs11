@@ -17,4 +17,7 @@ p11-kit server --provider /usr/lib/softhsm/libsofthsm2.so --name /tmp/p11-server
 # Start the ssh server
 ssh-keygen -A
 mkdir /run/sshd
-/usr/sbin/sshd -eD -o AllowTcpForwarding=yes -o PermitRootLogin=yes
+/usr/sbin/sshd -e -o AllowTcpForwarding=yes -o PermitRootLogin=yes
+
+# Start the KMIP server
+python kmip_server.py "$@"
