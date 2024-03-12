@@ -3,11 +3,7 @@ import timeit
 import pkcs11
 from pkcs11.util.rsa import encode_rsa_public_key
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.serialization import load_der_public_key
-
-from common import DATA, Protocol, ProtocolNotSetUpException
+from protocols.protocol import DATA, NUM_SIGNATURES, Protocol, ProtocolNotSetUpException
 
 PKCS11_LIBRARY_PATH = "/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so"
 TOKEN_LABEL = "token"
@@ -33,16 +29,7 @@ class PKCS11(Protocol):
         sig = self.private_key.sign(DATA)
         self.log.debug("Successfully signed data")
 
-        # Sanity check to make sure we can verify the signature
-        # without relying on the PKCS#11 library
-        # TODO: Make sure that these signing params are relevant
-        #       in the context of PKI
-        load_der_public_key(encode_rsa_public_key(self.public_key)).verify(
-            sig,
-            DATA,
-            padding.PKCS1v15(),
-            hashes.SHA512(),
-        )
+        self.verify_signature(encode_rsa_public_key(self.public_key), DATA, sig)
         self.log.debug("Successfully verified signed data")
 
         self.set_up_complete = True
@@ -58,6 +45,9 @@ class PKCS11(Protocol):
         def closure():
             self.private_key.sign(DATA)
 
-        time = timeit.timeit(closure, number=1000, globals=globals())
-        self.log.info("Testing finished. Time for 1000 signatures: %f", time)
-        self.log.info("Average time per signature: %f", time / 1000)
+        time = timeit.timeit(closure, number=NUM_SIGNATURES, globals=globals())
+        self.log.info(
+            "Testing finished. Time for %d signatures: %f seconds", NUM_SIGNATURES, time
+        )
+        self.log.info("Average time per signature: %f seconds", time / NUM_SIGNATURES)
+        self.log.debug("Testing complete")
