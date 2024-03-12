@@ -4,13 +4,14 @@ import argparse
 import logging
 import sys
 
-from p11 import PKCS11
-
+from protocols.kmip import KMIP
+from protocols.pkcs11 import PKCS11
 import netem
 
 
 def parse_args():
     parser = argparse.ArgumentParser("PKCS#11/KMIP test runner")
+    parser.add_argument("protocol", choices=["kmip", "pkcs11"])
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Show debug output", default=False
     )
@@ -25,7 +26,7 @@ def parse_args():
         "--delay", type=positive_int, help="Network delay to add (in milliseconds)"
     )
 
-    args, _ = parser.parse_known_args(sys.argv)
+    args, _ = parser.parse_known_args(sys.argv[1:])
     return args
 
 
@@ -39,7 +40,7 @@ def main():
     if args.delay:
         netem.add_delay(args.delay)
 
-    protocol = PKCS11()
+    protocol = KMIP() if args.protocol == "kmip" else PKCS11()
     protocol.set_up()
     protocol.run_tests()
 
