@@ -3,7 +3,8 @@ import timeit
 import pkcs11
 from pkcs11.util.rsa import encode_rsa_public_key
 
-from protocols.protocol import DATA, NUM_SIGNATURES, Protocol, ProtocolNotSetUpException
+from protocols.common import DATA, NUM_SIGNATURES
+from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 PKCS11_LIBRARY_PATH = "/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so"
 TOKEN_LABEL = "token"

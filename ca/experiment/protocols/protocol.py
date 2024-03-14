@@ -5,11 +5,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
-# TODO: replace this data with a proper tbs cert (or several)
-DATA = b"Hello there!"
-
-# TODO: Make this configurable
-NUM_SIGNATURES = 1000
 
 class Protocol(ABC):
     def __init__(self):

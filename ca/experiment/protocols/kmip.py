@@ -7,7 +7,8 @@ from kmip.core.factories.attributes import AttributeFactory
 from kmip.core.messages.contents import UniqueBatchItemID
 from kmip.services.kmip_client import KMIPProxy
 
-from protocols.protocol import DATA, NUM_SIGNATURES, Protocol, ProtocolNotSetUpException
+from protocols.common import DATA, NUM_SIGNATURES
+from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 
 class KMIP(Protocol):
