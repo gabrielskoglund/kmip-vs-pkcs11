@@ -1,9 +1,10 @@
 import timeit
 
 import pkcs11
+from pkcs11.mechanisms import Mechanism
 from pkcs11.util.rsa import encode_rsa_public_key
 
-from protocols.common import DATA, NUM_SIGNATURES
+from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH
 from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 PKCS11_LIBRARY_PATH = "/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so"
@@ -23,14 +24,14 @@ class PKCS11(Protocol):
         self.log.debug("Successfully opened session")
 
         self.public_key, self.private_key = self.session.generate_keypair(
-            pkcs11.KeyType.RSA, 2048
+            pkcs11.KeyType.RSA, RSA_KEY_LENGTH
         )
         self.log.debug("Successfully generated RSA keypair")
 
-        sig = self.private_key.sign(DATA)
+        sig = self.private_key.sign(DATA, mechanism=Mechanism.SHA256_RSA_PKCS)
         self.log.debug("Successfully signed data")
 
-        self.verify_signature(encode_rsa_public_key(self.public_key), DATA, sig)
+        self.verify_rsa_signature(encode_rsa_public_key(self.public_key), DATA, sig)
         self.log.debug("Successfully verified signed data")
 
         self.set_up_complete = True

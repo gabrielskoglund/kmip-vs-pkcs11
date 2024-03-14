@@ -54,3 +54,5 @@ DATA = bytes.fromhex(
 
 # TODO: Make this configurable
 NUM_SIGNATURES = 1000
+
+RSA_KEY_LENGTH = 4096

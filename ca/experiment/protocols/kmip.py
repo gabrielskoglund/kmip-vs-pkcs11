@@ -7,7 +7,7 @@ from kmip.core.factories.attributes import AttributeFactory
 from kmip.core.messages.contents import UniqueBatchItemID
 from kmip.services.kmip_client import KMIPProxy
 
-from protocols.common import DATA, NUM_SIGNATURES
+from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH
 from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 
@@ -35,7 +35,7 @@ class KMIP(Protocol):
         if response.result_status.value != enums.ResultStatus.SUCCESS:
             raise Exception(f"Could not get public key: {response.result_message}")
 
-        self.verify_signature(
+        self.verify_rsa_signature(
             response.secret.key_block.key_value.key_material.value, DATA, sig[0]
         )
         self.log.debug("Successfully verified signature")
@@ -50,6 +50,7 @@ class KMIP(Protocol):
                 "Please run the set_up method before running the tests"
             )
 
+        # TODO: Make configurable
         batch_size = 100
         batch = [DATA] * batch_size
 
@@ -74,7 +75,7 @@ class KMIP(Protocol):
             enums.CryptographicAlgorithm.RSA,
         )
         length = self.attribute_factory.create_attribute(
-            enums.AttributeType.CRYPTOGRAPHIC_LENGTH, 2048
+            enums.AttributeType.CRYPTOGRAPHIC_LENGTH, RSA_KEY_LENGTH
         )
         common_attributes = objects.TemplateAttribute(
             attributes=[algorithm, length],
@@ -114,10 +115,8 @@ class KMIP(Protocol):
         self.private_key = response.private_key_uuid
 
     def _sign(self, messages: List[bytes]) -> List[bytes]:
-        # TODO: We use the same parameters as the default p11-kit ones for now
-        #       Make sure that they are representative of params commonly used for certificates
         params = CryptographicParameters(
-            digital_signature_algorithm=enums.DigitalSignatureAlgorithm.SHA512_WITH_RSA_ENCRYPTION,
+            digital_signature_algorithm=enums.DigitalSignatureAlgorithm.SHA256_WITH_RSA_ENCRYPTION,
             padding_method=enums.PaddingMethod.PKCS1v15,
         )
 

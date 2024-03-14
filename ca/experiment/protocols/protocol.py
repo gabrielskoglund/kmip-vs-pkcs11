@@ -20,18 +20,16 @@ class Protocol(ABC):
         pass
 
     @classmethod
-    def verify_signature(
+    def verify_rsa_signature(
         self, public_key_der: bytes, message: bytes, signature: bytes
     ) -> None:
         # Sanity check to make sure we can verify a signature from the HSM
         # without relying on the HSM for verification
-        # TODO: Make sure that these signing params are relevant
-        #       in the context of PKI
         load_der_public_key(public_key_der).verify(
             signature,
             message,
             padding.PKCS1v15(),
-            hashes.SHA512(),
+            hashes.SHA256(),
         )
 
 
