@@ -8,5 +8,6 @@ ssh -Nf -L "$XDG_RUNTIME_DIR"/p11-kit/pkcs11:/tmp/p11-server \
     -o StrictHostKeyChecking=no \
     hsm
 
-# Run the experiment, passing any arguments to this script along
-python /experiment/main.py "$@"
+# Keep container running so that we can call the
+# experiment script via docker exec
+tail -f /dev/null

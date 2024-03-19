@@ -1,0 +1,13 @@
+{
+    "experiments" : [
+        {
+            "protocol" : "kmip",
+            "rtt_ms": 0,
+            "kmip_batch_size": 100
+        },
+        {
+            "protocol": "pkcs11",
+            "rtt_ms": 10
+        }
+    ]
+}

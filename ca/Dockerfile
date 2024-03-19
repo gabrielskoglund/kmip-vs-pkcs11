@@ -14,7 +14,8 @@ RUN mkdir -pm 0700 /run/user/0 && mkdir /run/user/0/p11-kit
 ENV XDG_RUNTIME_DIR=/run/user/0
 
 # Set up ssh keys for PKCS#11 forwarding with p11-kit
-COPY --chmod=600 p11/ssh_key.pub p11/ssh_key /root/.ssh/
+COPY p11/ssh_key.pub p11/ssh_key /root/.ssh/
+RUN chmod 600 /root/.ssh/ssh_key*
 
 # Setting up PyKMIP is a little involved since we need to apply
 # our own patch to enable batched requests

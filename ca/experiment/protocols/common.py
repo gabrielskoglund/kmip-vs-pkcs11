@@ -1,3 +1,5 @@
+import csv
+from typing import Dict
 
 # This data is the TBSCertificate bytes for the TLS certificate of
 # wikipedia.org. We use these in order to get a realistic amount of
@@ -52,7 +54,24 @@ DATA = bytes.fromhex(
     "0101ff04023000"
 )
 
-# TODO: Make this configurable
 NUM_SIGNATURES = 1000
 
+# TODO: Make this configurable
 RSA_KEY_LENGTH = 4096
+
+OUTPUT_FILE = "/experiment/results.csv"
+
+CSV_FIELDS = [
+    "protocol",
+    "key_type",
+    "key_length",
+    "rtt_ms",
+    "kmip_batch_size",
+    "num_signatures",
+    "time_s",
+]
+
+
+def write_result(result_dict: Dict) -> None:
+    with open(OUTPUT_FILE, "a") as f:
+        csv.DictWriter(f, fieldnames=CSV_FIELDS).writerow(result_dict)

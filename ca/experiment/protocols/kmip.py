@@ -7,11 +7,15 @@ from kmip.core.factories.attributes import AttributeFactory
 from kmip.core.messages.contents import UniqueBatchItemID
 from kmip.services.kmip_client import KMIPProxy
 
-from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH
+from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH, write_result
 from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 
 class KMIP(Protocol):
+    def __init__(self, rtt_ms: int, batch_size: int = 100):
+        super().__init__(rtt_ms)
+        self.batch_size = batch_size
+
     def set_up(self) -> None:
         self.log.debug("Set up started")
         self.attribute_factory = AttributeFactory()
@@ -43,31 +47,45 @@ class KMIP(Protocol):
         self.set_up_complete = True
         self.log.debug("Set up complete")
 
-    def run_tests(self) -> None:
-        self.log.debug("Testing started")
+    def run_experiment(self) -> None:
+        self.log.info(
+            f"Running KMIP experiment with {RSA_KEY_LENGTH} bit RSA key, "
+            f"batch size: {self.batch_size}, "
+            f"RTT: {self.rtt_ms}ms"
+        )
         if not self.set_up_complete:
             raise ProtocolNotSetUpException(
-                "Please run the set_up method before running the tests"
+                "Please run the set_up method before running the experiment"
             )
 
-        # TODO: Make configurable
-        batch_size = 100
-        batch = [DATA] * batch_size
+        batch = [DATA] * self.batch_size
 
         def closure():
             self._sign(batch)
 
         time = timeit.timeit(
-            closure, number=NUM_SIGNATURES // batch_size, globals=globals()
+            closure, number=NUM_SIGNATURES // self.batch_size, globals=globals()
         )
         self.log.info(
-            "Testing finished. Time for %d signatures with a batch size of %d: %f seconds",
+            "Experiment finished. Time for %d signatures with a batch size of %d: %f seconds",
             NUM_SIGNATURES,
-            batch_size,
+            self.batch_size,
             time,
         )
         self.log.info("Average time per signature: %f seconds", time / NUM_SIGNATURES)
-        self.log.debug("Testing complete")
+
+        write_result(
+            {
+                "protocol": "kmip",
+                "key_type": "rsa",
+                "key_length": RSA_KEY_LENGTH,
+                "rtt_ms": self.rtt_ms,
+                "kmip_batch_size": self.batch_size,
+                "num_signatures": NUM_SIGNATURES,
+                "time_s": time,
+            }
+        )
+        self.log.debug("Result written to file")
 
     def _create_rsa_signing_key(self):
         algorithm = self.attribute_factory.create_attribute(

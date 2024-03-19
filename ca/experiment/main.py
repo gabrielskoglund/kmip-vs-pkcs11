@@ -2,47 +2,44 @@
 
 import argparse
 import logging
+import pathlib
 import sys
 
+from protocols.common import OUTPUT_FILE
 from protocols.kmip import KMIP
 from protocols.pkcs11 import PKCS11
-import netem
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("PKCS#11/KMIP test runner")
+    parser = argparse.ArgumentParser()
     parser.add_argument("protocol", choices=["kmip", "pkcs11"])
-    parser.add_argument(
-        "-d", "--debug", action="store_true", help="Show debug output", default=False
-    )
-
-    def positive_int(val: str) -> int:
-        res = int(val)
-        if res <= 0:
-            raise ValueError("Argument must be a positive integer")
-        return res
-
-    parser.add_argument(
-        "--delay", type=positive_int, help="Network delay to add (in milliseconds)"
-    )
+    parser.add_argument("--rtt-ms", type=int, required=True)
+    parser.add_argument("-d", "--debug", action="store_true", default=False)
+    parser.add_argument("--kmip-batch-size", type=int, default=None)
 
     args, _ = parser.parse_known_args(sys.argv[1:])
     return args
 
 
 def main():
+    output_file = pathlib.Path(OUTPUT_FILE)
+    if not (output_file.exists() and output_file.is_file()):
+        raise RuntimeError(
+            f"{OUTPUT_FILE} is not available, make sure it is mounted in the container"
+        )
+
     args = parse_args()
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
 
-    if args.delay:
-        netem.add_delay(args.delay)
-
-    protocol = KMIP() if args.protocol == "kmip" else PKCS11()
+    if args.protocol == "kmip":
+        protocol = KMIP(rtt_ms=args.rtt_ms, batch_size=args.kmip_batch_size)
+    else:
+        protocol = PKCS11(rtt_ms=args.rtt_ms)
     protocol.set_up()
-    protocol.run_tests()
+    protocol.run_experiment()
 
     logging.debug("All done!")
 

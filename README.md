@@ -16,20 +16,31 @@ The experimental setup is designed around two Docker containers:
     in order to sign certificates.
 
 The CA container also contains [code](./ca/experiment) for performing timing tests of
-KMIP and PKCS#11 under different network conditions. At the moment this is controlled via
-`docker-compose`, but the intention is to instead set up a custom controller for launching
-and interacting with the containers.
+KMIP and PKCS#11 using different configurations.
+
+The experiments are orchestrated via the ["experiment runner"](./runner/main.py)
+which starts the containers and issues commands to the experiment script in the CA container.
+The experiment runner is also responsible for emulating network conditions using the
+[netem](https://wiki.linuxfoundation.org/networking/netem) Linux kernel module.
+The configuration of all experiments to run are provided in JSON format, and an example of
+this format can be seen in the [`experiments.json`](./runner/experiments.json) file.
+Output is given in CSV format.
 
 ## Example usage
 ```bash
-EXPERIMENT_ARGS="kmip" docker-compose up --abort-on-container-exit
+runner/main.py --experiments experiments.json --output-file results.csv --build
 ```
-will launch a basic experiment, testing the time taken to create 1000 signatures using
-the KMIP server.
+will first build the CA and HSM docker containers, and then run the experiments specified
+in `experiments.json`, storing the results in `results.csv`.
 
 ```bash
-EXPERIMENT_ARGS="pkcs11 --debug --delay 10" docker-compose up --abort-on-container-exit
+runner/main.py \
+    --experiments experiments.json \
+    --output-file results.csv \
+    --runner-debug \
+    --container-debug
 ```
-will launch the same experiment, but instead using the PKCS#11 interface of the HSM with
-an added delay of 10ms to each package sent from the CA, as well as providing debug output.
+will launch the same experiment, without rebuilding the containers and providing debug output
+from both the runner script and the CA container experiments.
 
+For more usage information consult the output of `runner/main.py --help`.

@@ -5,6 +5,7 @@ RUN apt-get update && \
         gnutls-bin \
         softhsm \
         openssh-server \
+        iproute2 \
         meson
 
 # Build p11-kit from source since the Debian verion seems outdated
