@@ -15,9 +15,11 @@ def parse_args():
     parser.add_argument("protocol", choices=["kmip", "pkcs11"])
     parser.add_argument("--rtt-ms", type=int, required=True)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
-    parser.add_argument("--kmip-batch-size", type=int, default=None)
+    parser.add_argument("--kmip-batch-size", type=int)
 
     args, _ = parser.parse_known_args(sys.argv[1:])
+    if args.protocol == "kmip" and not args.kmip_batch_size:
+        parser.error("--kmip-batch-size is required for the kmip protocol")
     return args
 
 
