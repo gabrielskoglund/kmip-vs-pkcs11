@@ -27,9 +27,8 @@ ENV XDG_RUNTIME_DIR=/run/user/0
 # Set up ssh keys for PKCS#11 tunneling with p11-kit
 COPY p11/ssh_key.pub /root/.ssh/authorized_keys
 
-# We can use the packaged version of PyKMIP for the server since
-# the KMIP server component already supports batching
-RUN pip install PyKMIP
+# Install patched fork of PyKMIP
+RUN pip install pip install git+https://github.com/gabrielskoglund/PyKMIP
 COPY kmip/server* kmip/ca_certificate.pem /etc/pykmip/
 
 COPY run.sh kmip/kmip_server.py /

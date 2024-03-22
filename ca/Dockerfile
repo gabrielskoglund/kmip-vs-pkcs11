@@ -17,17 +17,8 @@ ENV XDG_RUNTIME_DIR=/run/user/0
 COPY p11/ssh_key.pub p11/ssh_key /root/.ssh/
 RUN chmod 600 /root/.ssh/ssh_key*
 
-# Setting up PyKMIP is a little involved since we need to apply
-# our own patch to enable batched requests
-# TODO: Create a proper patched fork of PyKMIP and use that instead
-COPY kmip/pykmip_batching.patch /
-RUN git clone --single-branch https://github.com/OpenKMIP/PyKMIP \
-    && cd PyKMIP \
-    && git checkout cae5747a199ef13c62448b1b1ae4a36d8b12b144 \
-    && git apply --ignore-whitespace /pykmip_batching.patch \
-    && pip install . \
-    && cd \
-    && rm -rf PyKMIP pykmip_batching.patch
+# Install patched fork of PyKMIP
+RUN pip install pip install git+https://github.com/gabrielskoglund/PyKMIP
 
 # Set up PyKMIP client configuration files
 COPY kmip/pykmip.conf kmip/client* kmip/ca_certificate.pem /etc/pykmip/
