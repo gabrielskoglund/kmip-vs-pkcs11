@@ -4,7 +4,7 @@ import pkcs11
 from pkcs11.mechanisms import Mechanism
 from pkcs11.util.rsa import encode_rsa_public_key
 
-from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH, write_result
+from protocols.common import DATA, NUM_SIGNATURES, write_result
 from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 PKCS11_LIBRARY_PATH = "/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so"
@@ -24,7 +24,7 @@ class PKCS11(Protocol):
         self.log.debug("Successfully opened session")
 
         self.public_key, self.private_key = self.session.generate_keypair(
-            pkcs11.KeyType.RSA, RSA_KEY_LENGTH
+            pkcs11.KeyType.RSA, self.key_length
         )
         self.log.debug("Successfully generated RSA keypair")
 
@@ -39,7 +39,7 @@ class PKCS11(Protocol):
 
     def run_experiment(self) -> None:
         self.log.info(
-            f"Running PKCS#11 experiment with {RSA_KEY_LENGTH} bit RSA key, RTT: {self.rtt_ms}ms"
+            f"Running PKCS#11 experiment with {self.key_length} bit RSA key, RTT: {self.rtt_ms}ms"
         )
         if not self.set_up_complete:
             raise ProtocolNotSetUpException(
@@ -61,7 +61,7 @@ class PKCS11(Protocol):
             {
                 "protocol": "pkcs11",
                 "key_type": "rsa",
-                "key_length": RSA_KEY_LENGTH,
+                "key_length": self.key_length,
                 "rtt_ms": self.rtt_ms,
                 "num_signatures": NUM_SIGNATURES,
                 "time_s": time,

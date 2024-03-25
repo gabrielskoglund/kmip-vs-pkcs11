@@ -56,9 +56,6 @@ DATA = bytes.fromhex(
 
 NUM_SIGNATURES = 1000
 
-# TODO: Make this configurable
-RSA_KEY_LENGTH = 4096
-
 OUTPUT_FILE = "/experiment/results.csv"
 
 CSV_FIELDS = [

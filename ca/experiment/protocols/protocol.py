@@ -7,10 +7,11 @@ from cryptography.hazmat.primitives.serialization import load_der_public_key
 
 
 class Protocol(ABC):
-    def __init__(self, rtt_ms: int):
+    def __init__(self, rtt_ms: int, key_length: int):
         self.log = logging.getLogger(self.__class__.__name__)
         self.set_up_complete = False
         self.rtt_ms = rtt_ms
+        self.key_length = key_length
 
     @abstractmethod
     def set_up(self) -> None:

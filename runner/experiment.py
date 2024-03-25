@@ -16,30 +16,28 @@ class Experiment:
         ca: Container,
         hsm: Container,
         protocol: str,
-        rtt_ms: int = 0,
-        kmip_batch_size: int = None,
         debug: bool = False,
+        **kwargs,
     ):
         self.log = logging.getLogger(self.__class__.__name__)
         self.ca = ca
         self.hsm = hsm
         self.protocol = protocol
-        self.rtt_ms = rtt_ms
-        self.kmip_batch_size = kmip_batch_size
         self.debug = debug
+        self.kwargs = kwargs
 
     def run(self):
         self.set_rtt()
 
+        args = ""
+        for key, value in self.kwargs.items():
+            if value is not None:
+                args += f"--{key.replace('_', '-')} {value} "
+
         _, log = self.ca.exec_run(
             f"/experiment/main.py --protocol {self.protocol} "
-            f"{'--debug' if self.debug else ''} "
-            f"--rtt {self.rtt_ms} "
-            + (
-                f"--kmip-batch-size {self.kmip_batch_size}"
-                if self.kmip_batch_size
-                else ""
-            ),
+            + f"{'--debug' if self.debug else ''} "
+            + args,
             stream=True,
         )
         LogPrinter(log, "ca", AnsiCode.PURPLE).run()
@@ -47,7 +45,7 @@ class Experiment:
         self.reset_netem_settings()
 
     def set_rtt(self):
-        delay = self.rtt_ms / 2
+        delay = self.kwargs["rtt_ms"] / 2
         self.log.debug(f"Adding {delay}ms delay to eth0 of CA container")
         exit_code, _ = self.ca.exec_run(
             f"tc qdisc add dev eth0 root netem delay {delay}ms"

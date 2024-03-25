@@ -13,8 +13,9 @@ from protocols.pkcs11 import PKCS11
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("protocol", choices=["kmip", "pkcs11"])
-    parser.add_argument("--rtt-ms", type=int, required=True)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
+    parser.add_argument("--rtt-ms", type=int, required=True)
+    parser.add_argument("--key-length", type=int, required=True)
     parser.add_argument("--kmip-batch-size", type=int)
 
     args, _ = parser.parse_known_args(sys.argv[1:])
@@ -37,9 +38,13 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     if args.protocol == "kmip":
-        protocol = KMIP(rtt_ms=args.rtt_ms, batch_size=args.kmip_batch_size)
+        protocol = KMIP(
+            rtt_ms=args.rtt_ms,
+            batch_size=args.kmip_batch_size,
+            key_length=args.key_length,
+        )
     else:
-        protocol = PKCS11(rtt_ms=args.rtt_ms)
+        protocol = PKCS11(rtt_ms=args.rtt_ms, key_length=args.key_length)
     protocol.set_up()
     protocol.run_experiment()
 

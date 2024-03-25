@@ -3,13 +3,13 @@ import timeit
 from kmip.core import enums
 from kmip.pie.client import ProxyKmipClient
 
-from protocols.common import DATA, NUM_SIGNATURES, RSA_KEY_LENGTH, write_result
+from protocols.common import DATA, NUM_SIGNATURES, write_result
 from protocols.protocol import Protocol, ProtocolNotSetUpException
 
 
 class KMIP(Protocol):
-    def __init__(self, rtt_ms: int, batch_size: int = 100):
-        super().__init__(rtt_ms)
+    def __init__(self, rtt_ms: int, batch_size: int, key_length: int):
+        super().__init__(rtt_ms, key_length)
         self.batch_size = batch_size
 
     def set_up(self) -> None:
@@ -39,7 +39,7 @@ class KMIP(Protocol):
 
     def run_experiment(self) -> None:
         self.log.info(
-            f"Running KMIP experiment with {RSA_KEY_LENGTH} bit RSA key, "
+            f"Running KMIP experiment with {self.key_length} bit RSA key, "
             f"batch size: {self.batch_size}, "
             f"RTT: {self.rtt_ms}ms"
         )
@@ -72,7 +72,7 @@ class KMIP(Protocol):
             {
                 "protocol": "kmip",
                 "key_type": "rsa",
-                "key_length": RSA_KEY_LENGTH,
+                "key_length": self.key_length,
                 "rtt_ms": self.rtt_ms,
                 "kmip_batch_size": self.batch_size,
                 "num_signatures": NUM_SIGNATURES,
@@ -84,7 +84,7 @@ class KMIP(Protocol):
     def _create_rsa_signing_key(self):
         public_key, private_key = self.client.create_key_pair(
             algorithm=enums.CryptographicAlgorithm.RSA,
-            length=RSA_KEY_LENGTH,
+            length=self.key_length,
             private_usage_mask=[enums.CryptographicUsageMask.SIGN],
             public_usage_mask=[enums.CryptographicUsageMask.VERIFY],
         )
