@@ -1,8 +1,10 @@
 import timeit
+import hashlib
 
 import pkcs11
 from pkcs11.mechanisms import Mechanism
 from pkcs11.util.rsa import encode_rsa_public_key
+from pkcs11.util.ec import encode_ec_public_key, encode_ecdsa_signature
 
 from protocols.common import DATA, NUM_SIGNATURES, write_result
 from protocols.protocol import Protocol, ProtocolNotSetUpException
@@ -23,15 +25,27 @@ class PKCS11(Protocol):
         self.session = self.token.open(user_pin=TOKEN_USER_PIN)
         self.log.debug("Successfully opened session")
 
-        self.public_key, self.private_key = self.session.generate_keypair(
-            pkcs11.KeyType.RSA, self.key_length
-        )
-        self.log.debug("Successfully generated RSA keypair")
+        if self.key_type == "rsa":
+            self._create_rsa_signing_key()
+            self.log.debug("Successfully generated RSA keypair")
 
-        sig = self.private_key.sign(DATA, mechanism=Mechanism.SHA256_RSA_PKCS)
-        self.log.debug("Successfully signed data")
+            sig = self.private_key.sign(DATA, mechanism=self.mechanism)
+            self.log.debug("Successfully signed data")
 
-        self.verify_rsa_signature(encode_rsa_public_key(self.public_key), DATA, sig)
+            self.verify_rsa_signature(encode_rsa_public_key(self.public_key), DATA, sig)
+        else:
+            self._create_p256_signing_key()
+            self.log.debug("Successfully generated P-256 keypair")
+
+            # SoftHSMv2 does not support ECDSA with hashing, so we need
+            # to manually hash our data before sending it to the HSM.
+            data = hashlib.sha256(DATA).digest()
+            sig = self.private_key.sign(data, mechanism=self.mechanism)
+            self.log.debug("Successfully signed data")
+
+            sig = encode_ecdsa_signature(sig)
+            self.verify_p256_signature(encode_ec_public_key(self.public_key), DATA, sig)
+
         self.log.debug("Successfully verified signed data")
 
         self.set_up_complete = True
@@ -39,7 +53,13 @@ class PKCS11(Protocol):
 
     def run_experiment(self) -> None:
         self.log.info(
-            f"Running PKCS#11 experiment with {self.key_length} bit RSA key, RTT: {self.rtt_ms}ms"
+            "Running PKCS#11 experiment with "
+            + (
+                f"{self.key_length} bit RSA key, "
+                if self.key_type == "rsa"
+                else "P-256 key, "
+            )
+            + f"RTT: {self.rtt_ms}ms"
         )
         if not self.set_up_complete:
             raise ProtocolNotSetUpException(
@@ -47,7 +67,9 @@ class PKCS11(Protocol):
             )
 
         def closure():
-            self.private_key.sign(DATA)
+            self.private_key.sign(
+                hashlib.sha256(DATA).digest(), mechanism=self.mechanism
+            )
 
         time = timeit.timeit(closure, number=NUM_SIGNATURES, globals=globals())
         self.log.info(
@@ -60,7 +82,7 @@ class PKCS11(Protocol):
         write_result(
             {
                 "protocol": "pkcs11",
-                "key_type": "rsa",
+                "key_type": self.key_type,
                 "key_length": self.key_length,
                 "rtt_ms": self.rtt_ms,
                 "num_signatures": NUM_SIGNATURES,
@@ -68,3 +90,23 @@ class PKCS11(Protocol):
             }
         )
         self.log.debug("Result written to file")
+
+    def _create_rsa_signing_key(self):
+        self.public_key, self.private_key = self.session.generate_keypair(
+            pkcs11.KeyType.RSA, self.key_length
+        )
+        self.mechanism = Mechanism.SHA256_RSA_PKCS
+
+    def _create_p256_signing_key(self):
+        params = self.session.create_domain_parameters(
+            pkcs11.KeyType.EC,
+            {
+                pkcs11.Attribute.EC_PARAMS: pkcs11.util.ec.encode_named_curve_parameters(
+                    "secp256r1"
+                )
+            },
+            local=True,
+        )
+        self.public_key, self.private_key = params.generate_keypair()
+
+        self.mechanism = Mechanism.ECDSA

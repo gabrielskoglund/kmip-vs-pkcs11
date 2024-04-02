@@ -19,8 +19,12 @@ class KMIP(Protocol):
         self.client.open()
         self.log.debug("Successfully opened client connection")
 
-        self._create_rsa_signing_key()
-        self.log.debug("Successfully generated RSA key pair")
+        if self.key_type == "rsa":
+            self._create_rsa_signing_key()
+            self.log.debug("Successfully generated RSA key pair")
+        else:
+            self._create_p256_signing_key()
+            self.log.debug("Successfully generated P256 key pair")
 
         self.client.activate(self.private_key)
         self.log.debug("Successfully activated private key")
@@ -39,7 +43,8 @@ class KMIP(Protocol):
 
     def run_experiment(self) -> None:
         self.log.info(
-            f"Running KMIP experiment with {self.key_length} bit RSA key, "
+            f"Running KMIP experiment with {self.key_length} bit "
+            f"{self.key_type.upper()} key, "
             f"batch size: {self.batch_size}, "
             f"RTT: {self.rtt_ms}ms"
         )
@@ -96,3 +101,7 @@ class KMIP(Protocol):
             "hashing_algorithm": enums.HashingAlgorithm.SHA_256,
             "padding_method": enums.PaddingMethod.PKCS1v15,
         }
+
+    # TODO:
+    def _create_p256_signing_key(self):
+        raise NotImplementedError()

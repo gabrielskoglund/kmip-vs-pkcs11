@@ -15,6 +15,7 @@ def parse_args():
     parser.add_argument("protocol", choices=["kmip", "pkcs11"])
     parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("--rtt-ms", type=int, required=True)
+    parser.add_argument("--key-type", choices=["rsa", "p256"], required=True)
     parser.add_argument("--key-length", type=int, required=True)
     parser.add_argument("--kmip-batch-size", type=int)
 
@@ -41,10 +42,13 @@ def main():
         protocol = KMIP(
             rtt_ms=args.rtt_ms,
             batch_size=args.kmip_batch_size,
+            key_type=args.key_type,
             key_length=args.key_length,
         )
     else:
-        protocol = PKCS11(rtt_ms=args.rtt_ms, key_length=args.key_length)
+        protocol = PKCS11(
+            rtt_ms=args.rtt_ms, key_length=args.key_length, key_type=args.key_type
+        )
     protocol.set_up()
     protocol.run_experiment()
 
