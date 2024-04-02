@@ -1,3 +1,4 @@
 .direnv
 .envrc
+.flake8
 __pycache__
