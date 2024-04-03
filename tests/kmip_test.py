@@ -1,4 +1,5 @@
-from src.kmip_api import DATA, KEY_ID, KMIPClient, KMIPServer, SIGNATURE_DATA
+from src.common import DATA, SIGNATURE_DATA
+from src.kmip_api import KEY_ID, KMIPClient, KMIPServer
 
 from kmip.core import enums
 from kmip.core.messages import contents
