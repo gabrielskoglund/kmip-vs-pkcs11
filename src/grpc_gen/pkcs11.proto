@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+// Minimal PKCS#11 interface for signing operations.
+service PKCS11 {
+  // Initialize a signing operation.
+  // See PKCS #13 Specification Version 3.1 section 5.13.1
+  rpc C_SignInit(SignInit) returns (SignInitResponse) {}
+
+  // Sign single part data.
+  // The signing operation must be initialized with C_SignInit before
+  // this function is called.
+  // See PKCS #13 Specification Version 3.1 section 5.13.2
+  rpc C_Sign(Sign) returns (SignResponse) {}
+}
+
+// Cryptoki return value
+// This represents only a small subset of the full specification.
+// See PKCS #11 Specification Version 3.1 section 5.1
+enum CK_RV {
+  CKR_OK = 0;
+  CKR_OPERATION_ACTIVE = 144;
+  CKR_OPERATION_NOT_INITIALIZED = 145;
+}
+
+// Cryptoki mechanism type
+// This represents only a small subset of the full specification.
+// See PKCS #11 Specification Version 3.1 section 6
+enum CK_MECHANISM_TYPE {
+  CKM_NULL = 0;
+  CKM_CKM_ECDSA_SHA256 = 4164;
+}
+
+// Information required to initialize a signing operation.
+message SignInit {
+  uint32 session_handle = 1;
+  CK_MECHANISM_TYPE mechanism = 2;
+  uint32 key_handle = 3;
+}
+
+// Response to a SignInit message.
+message SignInitResponse { CK_RV return_value = 1; }
+
+// Data to be signed.
+message Sign {
+  uint32 session_handle = 1;
+  bytes data = 2;
+}
+
+// Signed data in response to a Sign message.
+message SignResponse {
+  CK_RV return_value = 1;
+  optional bytes signature = 2;
+}
