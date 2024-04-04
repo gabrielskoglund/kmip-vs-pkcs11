@@ -8,6 +8,7 @@ import grpc_gen.pkcs11_pb2 as p11_pb
 import grpc_gen.pkcs11_pb2_grpc as p11_grpc
 from common import DATA
 from common import SIGNATURE_DATA
+from common import PKCS11SessionStatus
 from mock_hsm import MockHSM
 
 GRPC_PORT_NUMBER = 50001
@@ -82,15 +83,6 @@ class PKCS11Servicer(p11_grpc.PKCS11Servicer):
 
     :param hsm: the MockHSM object to use when performing signing operations.
     """
-
-    class SessionStatus(Enum):
-        """
-        Session status represents the current state of a PKCS#11 session.
-        """
-
-        READY = 0
-        SIGN_INITIALIZED = 1
-
     def __init__(self, hsm: MockHSM):
         super().__init__()
         self.log = logging.getLogger(self.__class__.__name__)
@@ -104,13 +96,13 @@ class PKCS11Servicer(p11_grpc.PKCS11Servicer):
         self.log.debug("Received SignInit request")
         session = request.session_handle
 
-        if self.session_status.get(session) == self.SessionStatus.SIGN_INITIALIZED:
+        if self.session_status.get(session) == PKCS11SessionStatus.SIGN_INITIALIZED:
             self.log.debug("Invalid SignInit request, signing already in progress")
             return p11_pb.SignInitResponse(
                 return_value=p11_pb.CK_RV.CKR_OPERATION_ACTIVE
             )
 
-        self.session_status[session] = self.SessionStatus.SIGN_INITIALIZED
+        self.session_status[session] = PKCS11SessionStatus.SIGN_INITIALIZED
         return p11_pb.SignInitResponse(return_value=p11_pb.CK_RV.CKR_OK)
 
     def C_Sign(self, request, context):
@@ -121,7 +113,7 @@ class PKCS11Servicer(p11_grpc.PKCS11Servicer):
         self.log.debug("Received Sign request")
         session = request.session_handle
 
-        if self.session_status.get(session) != self.SessionStatus.SIGN_INITIALIZED:
+        if self.session_status.get(session) != PKCS11SessionStatus.SIGN_INITIALIZED:
             self.log.debug("Invalid Sign request, signing not initialized")
             return p11_pb.SignResponse(
                 return_value=p11_pb.CK_RV.CKR_OPERATION_NOT_INITIALIZED
@@ -131,7 +123,7 @@ class PKCS11Servicer(p11_grpc.PKCS11Servicer):
         self.hsm.sign()
         self.log.debug("Signing complete")
 
-        self.session_status[session] = self.SessionStatus.READY
+        self.session_status[session] = PKCS11SessionStatus.READY
         return p11_pb.SignResponse(
             return_value=p11_pb.CK_RV.CKR_OK, signature=SIGNATURE_DATA
         )

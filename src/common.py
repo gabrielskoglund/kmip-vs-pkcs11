@@ -1,3 +1,5 @@
+from enum import Enum
+
 # This data is the DER encoded TBSCertificate bytes for a server TLS certificate.
 # We use these in order to get a realistic amount of data to sign in the experiements.
 DATA = bytes.fromhex(
@@ -58,3 +60,12 @@ SIGNATURE_DATA = bytes.fromhex(
     "71022100a42b71e64de41d78a3fe7c0743e0a070e6b355ac393ab466430bf56f0da914"
     "d9"
 )
+
+
+class PKCS11SessionStatus(Enum):
+    """
+    Session status represents the current state of a PKCS#11 session.
+    """
+
+    READY = 0
+    SIGN_INITIALIZED = 1
