@@ -116,14 +116,10 @@ class KMIPClient:
     @classmethod
     def _get_ssl_context(cls):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        # Ensure that we are using TLS 1.3
-        context.minimum_version = ssl.TLSVersion.TLSv1_3
-        context.maximum_version = ssl.TLSVersion.TLSv1_3
         context.check_hostname = False
         # Set up client authentication
         context.load_cert_chain(auth.CLIENT_CERT_PATH, auth.CLIENT_KEY_PATH)
         context.load_verify_locations(auth.ROOT_CERT_PATH)
-        context.post_handshake_auth = True
 
         return context
 
@@ -135,13 +131,7 @@ class KMIPClient:
         conn.connect(("localhost", KMIP_PORT_NUMBER))
         self.log.debug("Connection to server successful")
 
-        # Note: We need to perform this extra read to get the client certificate
-        # request from the server, the actual data recieved is irrelevant.
-        # The certificate will be sent in the next message from the client.
-        # For more details see `KMIPServer._handle_connection`.
-        conn.read()
         req = self.encode_request(batch_count)
-
         conn.sendall(req)
         self.log.debug(f"Sent KMIP request with batch count {batch_count}")
 
@@ -247,30 +237,15 @@ class KMIPServer:
     @classmethod
     def _get_ssl_context(cls) -> ssl.SSLContext:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        # Ensure that we are using TLS 1.3
-        context.minimum_version = ssl.TLSVersion.TLSv1_3
-        context.maximum_version = ssl.TLSVersion.TLSv1_3
         # Require client authentication
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_cert_chain(auth.SERVER_CERT_PATH, auth.SERVER_KEY_PATH)
         context.load_verify_locations(auth.ROOT_CERT_PATH)
-        context.post_handshake_auth = True
 
         return context
 
     def _handle_request(self, conn: ssl.SSLSocket) -> None:
         self.log.debug("Accepted connection")
-
-        # Note: the request for the client cert is sent in the next message
-        # from the server to the client. For this reason we send a message
-        # to the client before we handle any client data. If we didn't perform
-        # this extra step, unauthenticated clients would be able to perform
-        # a single request-response operation.
-        # Ref: https://docs.python.org/3/library/ssl.html#tls-1-3 and
-        # https://docs.python.org/3/library/ssl.html#ssl.SSLSocket.verify_client_post_handshake
-        conn.verify_client_post_handshake()
-        conn.send(b"Certificate please :)")
-        self.log.debug("Sent client cert request")
 
         # Read the message header from the KMIP message
         header = conn.recv(8)
