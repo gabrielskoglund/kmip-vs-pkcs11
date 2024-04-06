@@ -184,7 +184,7 @@ class PKCS11RESTServer:
     def __init__(self, hsm):
         self.log = logging.getLogger(self.__class__.__name__)
         self.server = socketserver.TCPServer(
-            ("localhost", REST_API_PORT), self._Handler
+            ("localhost", REST_API_PORT), self._Handler, bind_and_activate=False
         )
         self.server.socket = self._get_ssl_context().wrap_socket(
             self.server.socket, server_side=True, do_handshake_on_connect=True
@@ -199,6 +199,10 @@ class PKCS11RESTServer:
         Serve connections from PKCS11RESTClients on the local network.
         """
         self.log.debug(f"Server started, listening to localhost port {REST_API_PORT}")
+        # We manually bind and activate the server to be able to set the
+        # allow_reuse_address property (in __init__) before the socket is bound
+        self.server.server_bind()
+        self.server.server_activate()
         self.server.serve_forever()
 
     def _get_ssl_context(self) -> ssl.SSLContext:
