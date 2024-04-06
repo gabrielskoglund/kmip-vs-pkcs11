@@ -27,14 +27,10 @@ class KMIPClient:
     """
     KMIPClient provides a simple interface for performing signing requests
     to a KMIPServer.
-
-    :param simulated_rtt_ms: the round trip time to add for each network
-    round trip, in order to simulate real network conditions.
     """
 
-    def __init__(self, simulated_rtt_ms: float = 0):
+    def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.rtt_delay_s = simulated_rtt_ms / 1000
 
     def sign(self, num_signatures: int, batch_count: int) -> None:
         """
@@ -151,11 +147,6 @@ class KMIPClient:
 
         for item in res.batch_items:
             assert item.result_status.value == enums.ResultStatus.SUCCESS
-
-        # We simulate the round trip time between client and server
-        # by sleeping for a set amount of time before returning.
-        # TODO: also take into account the TLS establishment round trips
-        time.sleep(self.rtt_delay_s)
 
 
 class KMIPServer:
