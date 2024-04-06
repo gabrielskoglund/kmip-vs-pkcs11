@@ -13,8 +13,8 @@ To emulate this, a client and server is implemented for the following:
 * [PKCS#11 using gRPC](./src/grpc_api.py) - The PKCS#11 standard defines a C API, and does not
   specify a canonical way to use PKCS#11 over a network. This implementation uses
   the [gRPC](https://grpc.io/) protocol to transmit messages using protocol buffers.
-* [PKCS#11 using a REST API] - In order to evaluate an alternate transport method, this
-  implementation uses a simple JSON-based REST API for singing operations.
+* [PKCS#11 using a REST API](./src/rest_api.py) - In order to evaluate an alternate
+  transport method, this implementation uses a simple JSON-based REST API for singing operations.
 
 All implementations use TLS 1.3 with mutual authentication.
 
@@ -22,3 +22,45 @@ In order to test the performance of the protocols without relying on real HMS or
 cryptographic implementations, the servers use a ["mock HSM"](./src/mock_hsm.py) which
 emulates a HSM that performs signatures in constant time and can be tuned for different
 number of signatures per second.
+
+## Running the experiments
+The [experiment runner](./src/experiment_runner.py) can be used to run a set of experiments,
+specified in JSON format. An example of such an experiment set can be seen in
+the [`experiments.json` file](./src/experiments.json). A full JSON-schema is also available in
+the experiment runner source code. The runner will perform all experiments from the given file
+(by default `experiments.json`) and write output in CSV format to another file
+(by default `results.csv`). Other locations can be specified using the `--experiments-file`
+and `--output-file` command line options.
+
+As an example, if the `experiments.json` file contains the following:
+```json
+{
+    "experiments": [
+        {
+            "api": "kmip",
+            "hsm_capacity": 1000,
+            "num_signatures": 10000,
+            "kmip_batch_count": 100
+        }
+    ]
+}
+```
+the command `python3 experiment_runner.py` will perform all experiments specified in
+the `"experiments"` array. In this case this will be a single experiment where a KMIP
+server will be started, using a mock HSM capable of performing 1000 signatures per
+second. The time taken for a KMIP client to perform 10000 signatures using this server
+will be timed, and the client will batch 100 signing requests in each message to the server.
+
+### Output format
+The experiment runner stores relevant information about each experiment in CSV format.
+The fields in this format is in the following order:
+* API used
+* HSM capacity in (signatures per second)
+* Number of signatures performed
+* KMIP batch count (only present when using the KMIP API, otherwise left empty)
+* Time taken (in seconds)
+
+For the example above, the output to the `results.csv` file might be something like:
+```
+kmip,1000,10000,100,36.754375431999506
+```
