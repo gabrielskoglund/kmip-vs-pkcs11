@@ -137,7 +137,8 @@ class PKCS11gRPCServer:
     """
     def __init__(self, hsm: MockHSM):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.server = grpc.server(futures.ThreadPoolExecutor(10))
+        # We use only one thread for the server since the API is not thread safe
+        self.server = grpc.server(futures.ThreadPoolExecutor(1))
         self.server.add_secure_port(
             address=f"localhost:{GRPC_PORT_NUMBER}",
             server_credentials=self._get_credentials(),
