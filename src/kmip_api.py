@@ -93,7 +93,7 @@ class KMIPClient:
                         enums.Operation, enums.Operation.SIGN, tag=enums.Tags.OPERATION
                     ),
                     request_payload=payload,
-                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes()),
+                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes(4)),
                 )
             )
 
@@ -225,7 +225,7 @@ class KMIPServer:
                     response_payload=payloads.SignResponsePayload(
                         unique_identifier=KEY_ID, signature_data=SIGNATURE_DATA
                     ),
-                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes()),
+                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes(4)),
                 )
             )
 
