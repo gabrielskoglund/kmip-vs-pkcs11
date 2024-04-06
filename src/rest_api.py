@@ -97,6 +97,9 @@ class PKCS11RESTServer:
         for performing the actual PKCS#11 operations.
         """
 
+        def log_request(self, code="-", size="-"):
+            pass
+
         def do_POST(self) -> None:
             """
             Handle an incoming POST request.
@@ -186,6 +189,7 @@ class PKCS11RESTServer:
         self.server.socket = self._get_ssl_context().wrap_socket(
             self.server.socket, server_side=True, do_handshake_on_connect=True
         )
+        self.server.allow_reuse_address = True
         self.server.session_status = {}
         self.server.log = logging.getLogger(self.server.__class__.__name__)
         self.server.hsm = hsm
