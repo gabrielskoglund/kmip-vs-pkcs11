@@ -4,6 +4,7 @@ import json
 import multiprocessing
 import random
 import sys
+import time
 import timeit
 
 import jsonschema
@@ -96,8 +97,10 @@ class Experiment:
         queue = multiprocessing.Queue()
         proc = multiprocessing.Process(target=self._start_server, args=(queue,))
         proc.start()
-        # Wait until server is ready
+        # Wait until the server is set up
         _ = queue.get()
+        # Sleep a short while to ensure the server is fully ready
+        time.sleep(5)
         self._run_client(outfile)
         proc.kill()
 
