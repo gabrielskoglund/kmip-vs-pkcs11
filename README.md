@@ -64,3 +64,22 @@ For the example above, the output to the `results.csv` file might be something l
 ```
 kmip,1000,10000,100,36.754375431999506
 ```
+
+### Experiments using different network conditions
+When running the experiments on a Linux system, it is possible to use the
+[`netem`](https://wiki.linuxfoundation.org/networking/netem) module to emulate
+specific network conditions. This can be used to measure how the different APIs
+perform depending on network latency. For example, to emulate a network latency
+between client and server of 1 ms, running the command
+```bash
+sudo tc qdisc add dev lo root netem delay 1ms
+```
+will add a delay of 1ms to all traffic sent on the loopback interface,
+affecting the traffic between client and server on the local network.
+Note that this requires `sudo` privileges.
+
+In order to remove this emulated delay once the experiments have been run,
+the corresponding command is
+```bash
+sudo tc qdisc delete dev lo root netem
+```
