@@ -1,90 +1,146 @@
 {
-    "repeat": 3,
+    "repeat": 10,
     "shuffle": true,
     "experiments": [
         {
             "api": "kmip",
             "hsm_capacity": 100,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
             "kmip_batch_count": 1
         },
         {
             "api": "kmip",
             "hsm_capacity": 1000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
             "kmip_batch_count": 1
         },
         {
             "api": "kmip",
             "hsm_capacity": 10000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
             "kmip_batch_count": 1
         },
         {
             "api": "kmip",
             "hsm_capacity": 100,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
             "kmip_batch_count": 10
         },
         {
             "api": "kmip",
             "hsm_capacity": 1000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
             "kmip_batch_count": 10
         },
         {
             "api": "kmip",
             "hsm_capacity": 10000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
             "kmip_batch_count": 10
         },
         {
             "api": "kmip",
             "hsm_capacity": 100,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
             "kmip_batch_count": 100
         },
         {
             "api": "kmip",
             "hsm_capacity": 1000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
             "kmip_batch_count": 100
         },
         {
             "api": "kmip",
             "hsm_capacity": 10000,
-            "num_signatures": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
             "kmip_batch_count": 100
         },
         {
             "api": "grpc",
             "hsm_capacity": 100,
-            "num_signatures": 10000
+            "num_signatures": 1000
         },
         {
             "api": "grpc",
             "hsm_capacity": 1000,
-            "num_signatures": 10000
+            "num_signatures": 1000
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000
         },
         {
             "api": "grpc",
             "hsm_capacity": 10000,
-            "num_signatures": 10000
+            "num_signatures": 1000
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000
         },
         {
             "api": "rest",
             "hsm_capacity": 100,
-            "num_signatures": 10000
+            "num_signatures": 1000
         },
         {
             "api": "rest",
             "hsm_capacity": 1000,
-            "num_signatures": 10000
+            "num_signatures": 1000
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000
         },
         {
             "api": "rest",
             "hsm_capacity": 10000,
-            "num_signatures": 10000
+            "num_signatures": 1000
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000
         }
     ]
 }
