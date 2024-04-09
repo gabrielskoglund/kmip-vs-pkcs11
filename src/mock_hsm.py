@@ -22,7 +22,7 @@ class MockHSM:
         Perform a mock signing operation, simply delaying for a constant
         amount of time.
         """
-        time.sleep(self.delay_s)
+        self._sleep(self.delay_s)
 
     def _tune_delay(self) -> None:
         """
@@ -41,3 +41,14 @@ class MockHSM:
             # Update delay based on how far from the target we were
             self.delay_s *= 1 / t
         self.log.debug("HSM delay tuning done")
+
+    def _sleep(self, duration: float) -> None:
+        """
+        Sleep for the given duration (in seconds).
+        Benchmarking the performance of this function has shown that
+        it has better granularity than time.sleep.
+        """
+        now = time.perf_counter()
+        end = now + duration
+        while now < end:
+            now = time.perf_counter()
