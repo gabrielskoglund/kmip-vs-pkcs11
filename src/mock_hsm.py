@@ -1,3 +1,4 @@
+import threading
 import logging
 import time
 import timeit
@@ -10,11 +11,18 @@ class MockHSM:
 
     :param signatures_per_second: the desired signing capability
         of the HSM in terms of signatures per second.
+    :thread_safe: a boolean indicating if this HSM should be safe
+        to access from multiple threads. In that case,
+        the `sign` operation will use locking to ensure that
+        it cannot be used by more than one thread at a time.
     """
 
-    def __init__(self, signatures_per_second: int):
+    def __init__(self, signatures_per_second: int, thread_safe: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
         self.signatures_per_second = signatures_per_second
+        self.thread_safe = thread_safe
+        if thread_safe:
+            self.lock = threading.Lock()
         self._tune_delay()
 
     def sign(self) -> None:
@@ -22,7 +30,12 @@ class MockHSM:
         Perform a mock signing operation, simply delaying for a constant
         amount of time.
         """
-        self._sleep(self.delay_s)
+        if self.thread_safe:
+            self.lock.acquire()
+            self._sleep(self.delay_s)
+            self.lock.release()
+        else:
+            self._sleep(self.delay_s)
 
     def _tune_delay(self) -> None:
         """
