@@ -40,7 +40,8 @@ As an example, if the `experiments.json` file contains the following:
             "api": "kmip",
             "hsm_capacity": 1000,
             "num_signatures": 10000,
-            "kmip_batch_count": 100
+            "kmip_batch_count": 100,
+            "threaded": false
         }
     ]
 }
@@ -59,10 +60,11 @@ The fields in this format is in the following order:
 * Number of signatures performed
 * KMIP batch count (only present when using the KMIP API, otherwise left empty)
 * Time taken (in seconds)
+* Boolean indicating if threaded mode was used
 
 For the example above, the output to the `results.csv` file might be something like:
 ```
-kmip,1000,10000,100,36.754375431999506
+kmip,1000,10000,100,36.754375431999506,False
 ```
 
 ### Experiments using different network conditions

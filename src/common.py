@@ -61,6 +61,9 @@ SIGNATURE_DATA = bytes.fromhex(
     "d9"
 )
 
+# The number of threads to use for any ThreadPoolExecutor objects.
+NUM_THREADS = 100
+
 
 class PKCS11SessionStatus(Enum):
     """

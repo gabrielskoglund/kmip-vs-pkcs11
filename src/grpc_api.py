@@ -1,12 +1,12 @@
 import grpc
 import logging
-from enum import Enum
 from concurrent import futures
 
 import auth.auth as auth
 import grpc_gen.pkcs11_pb2 as p11_pb
 import grpc_gen.pkcs11_pb2_grpc as p11_grpc
 from common import DATA
+from common import NUM_THREADS
 from common import SIGNATURE_DATA
 from common import PKCS11SessionStatus
 from mock_hsm import MockHSM
@@ -22,9 +22,12 @@ class PKCS11gRPCClient:
     """
     PKCS11gRPCClient provides a simple interface for performing signing requests
     to a PKCS11gRPCServer.
+
+    :param threaded: boolean indicating whether to perform several signing requests
+        concurrently using a thread pool
     """
 
-    def __init__(self):
+    def __init__(self, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
         self.stub = p11_grpc.PKCS11Stub(
             grpc.secure_channel(
@@ -32,6 +35,9 @@ class PKCS11gRPCClient:
                 credentials=self._get_credentials(),
             )
         )
+        self.threaded = threaded
+        if threaded:
+            self.thread_pool = futures.ThreadPoolExecutor(NUM_THREADS)
 
     def sign(self, num_signatures: int) -> None:
         """
@@ -44,23 +50,34 @@ class PKCS11gRPCClient:
             raise ValueError("num_signatures must be a positive integer")
 
         self.log.debug(f"Beginning signing operations for {num_signatures} signatures")
-        for i in range(num_signatures):
-            res = self.stub.C_SignInit(
-                p11_pb.SignInit(
-                    session_handle=SESSION_HANDLE,
-                    key_handle=KEY_HANDLE,
-                    mechanism=p11_pb.CK_MECHANISM_TYPE.CKM_CKM_ECDSA_SHA256,
-                )
-            )
-            assert res.return_value == p11_pb.CK_RV.CKR_OK
 
-            res = self.stub.C_Sign(
-                p11_pb.Sign(session_handle=SESSION_HANDLE, data=DATA)
-            )
-            assert res.return_value == p11_pb.CK_RV.CKR_OK
-            self.log.debug("Successfully signed message")
+        if self.threaded:
+            fs = [
+                self.thread_pool.submit(self._sign_single, session_handle=i)
+                for i in range(num_signatures)
+            ]
+            futures.wait(fs, return_when=futures.ALL_COMPLETED)
+            assert all([f.exception() is None for f in fs])
+
+        else:
+            for i in range(num_signatures):
+                self._sign_single()
 
         self.log.debug("Signing operation complete")
+
+    def _sign_single(self, session_handle: int = SESSION_HANDLE) -> None:
+        res = self.stub.C_SignInit(
+            p11_pb.SignInit(
+                session_handle=session_handle,
+                key_handle=KEY_HANDLE,
+                mechanism=p11_pb.CK_MECHANISM_TYPE.CKM_CKM_ECDSA_SHA256,
+            )
+        )
+        assert res.return_value == p11_pb.CK_RV.CKR_OK
+
+        res = self.stub.C_Sign(p11_pb.Sign(session_handle=session_handle, data=DATA))
+        assert res.return_value == p11_pb.CK_RV.CKR_OK
+        self.log.debug("Successfully signed message")
 
     def _get_credentials(self) -> grpc.ChannelCredentials:
         with open(auth.CLIENT_KEY_PATH, "rb") as f:
@@ -133,12 +150,19 @@ class PKCS11gRPCServer:
     """
     PKCS11gRPCServer handles signing requests from a PKCS11gRPCClient.
 
-    :param hsm: The MockHSM to use for signing operations.
+    :param hsm: the MockHSM to use for signing operations.
+    :param threaded: whether to service multiple requests concurrently using
+        a thread pool.
     """
-    def __init__(self, hsm: MockHSM):
+
+    def __init__(self, hsm: MockHSM, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
-        # We use only one thread for the server since the API is not thread safe
-        self.server = grpc.server(futures.ThreadPoolExecutor(1))
+        if threaded:
+            if not hsm.thread_safe:
+                raise ValueError("Provided MockHSM must be thread-safe")
+            self.server = grpc.server(futures.ThreadPoolExecutor(NUM_THREADS))
+        else:
+            self.server = grpc.server(futures.ThreadPoolExecutor(1))
         self.server.add_secure_port(
             address=f"localhost:{GRPC_PORT_NUMBER}",
             server_credentials=self._get_credentials(),

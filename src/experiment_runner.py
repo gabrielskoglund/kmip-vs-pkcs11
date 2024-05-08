@@ -23,10 +23,12 @@ experiments_schema = {
         "repeat": {
             "type": "integer",
             "minimum": 1,
+            "default": 1,
             "description": "How many times to repeat each experiment",
         },
         "shuffle": {
             "type": "boolean",
+            "default": "false",
             "description": "Whether to shuffle the experiment list before running",
         },
         "experiments": {
@@ -54,6 +56,11 @@ experiments_schema = {
                         "minimum": 1,
                         "description": "Number of KMIP sign operations per request",
                     },
+                    "threaded": {
+                        "type": "boolean",
+                        "default": "false",
+                        "description": "Whether to run the server in threaded mode",
+                    },
                 },
                 "required": ["api", "hsm_capacity", "num_signatures"],
                 # Require kmip_batch_count to be set if the KMIP API is used
@@ -74,15 +81,22 @@ class Experiment:
     :param hsm_capacity: the HSM capacity in terms of signatures/second.
     :param num_signatures: how many signatures to perform.
     :param kmip_batch_count: how many kmip operations to batch per request.
+    :param threaded: whether to run the client and server in threaded mode.
     """
 
     def __init__(
-        self, api: str, hsm_capacity: int, num_signatures: int, kmip_batch_count=None
+        self,
+        api: str,
+        hsm_capacity: int,
+        num_signatures: int,
+        kmip_batch_count=None,
+        threaded: bool = False,
     ):
         self.api = api
         self.hsm_capacity = hsm_capacity
         self.num_signatures = num_signatures
         self.kmip_batch_count = kmip_batch_count
+        self.threaded = threaded
 
     def run(self, outfile: str) -> None:
         """
@@ -92,7 +106,7 @@ class Experiment:
 
         :param outfile: the output file to use. The data will be written in CSV format
             with the field order: "api", "hsm_capacity", "num_signatures",
-            "kmip_batch_count", "time"
+            "kmip_batch_count", "time", "threaded"
         """
         queue = multiprocessing.Queue()
         proc = multiprocessing.Process(target=self._start_server, args=(queue,))
@@ -106,7 +120,8 @@ class Experiment:
 
     def _start_server(self, queue: multiprocessing.Queue) -> None:
         print(
-            f"Starting {self.api} server with HSM capacity {self.hsm_capacity} sigs/sec"
+            f"Starting {'threaded' if self.threaded else 'non-threaded'} "
+            f"{self.api} server with HSM capacity {self.hsm_capacity} sigs/sec"
         )
         server_type = {
             "kmip": kmip_api.KMIPServer,
@@ -114,14 +129,15 @@ class Experiment:
             "rest": rest_api.PKCS11RESTServer,
         }
 
-        hsm = mock_hsm.MockHSM(self.hsm_capacity)
-        server = server_type[self.api](hsm)
+        hsm = mock_hsm.MockHSM(self.hsm_capacity, thread_safe=self.threaded)
+        server = server_type[self.api](hsm, self.threaded)
         queue.put("ready")
         server.serve()
 
     def _run_client(self, outfile: str) -> None:
         print(
-            f"Timing {self.num_signatures} signatures using a {self.api} client"
+            f"Timing {self.num_signatures} signatures using a "
+            f"{'threaded' if self.threaded else 'non-threaded' } {self.api} client"
             + (
                 f" with batch count {self.kmip_batch_count}"
                 if self.api == "kmip"
@@ -134,7 +150,8 @@ class Experiment:
             "rest": rest_api.PKCS11RESTClient,
         }
 
-        client = client_type[self.api]()
+        client = client_type[self.api](self.threaded)
+
         if isinstance(client, kmip_api.KMIPClient):
             t = timeit.timeit(
                 lambda: client.sign(
@@ -158,6 +175,7 @@ class Experiment:
                 "num_signatures",
                 "kmip_batch_count",
                 "time",
+                "threaded",
             ]
 
             writer = csv.DictWriter(f, fieldnames)
@@ -168,6 +186,7 @@ class Experiment:
                     "num_signatures": self.num_signatures,
                     "kmip_batch_count": self.kmip_batch_count,
                     "time": time,
+                    "threaded": self.threaded,
                 }
             )
 
@@ -198,8 +217,8 @@ def main():
     for exp in exp_config["experiments"]:
         experiments.append(Experiment(**exp))
 
-    repeat_count = exp_config.get("repeat", 1)
-    shuffle = exp_config.get("shuffle", False)
+    repeat_count = exp_config.get("repeat")
+    shuffle = exp_config.get("shuffle")
     total_runs = repeat_count * len(experiments)
     current_run = 0
 

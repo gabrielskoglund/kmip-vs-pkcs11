@@ -1,8 +1,8 @@
+import concurrent
 import logging
 import socket
 import ssl
 import struct
-import time
 
 from kmip.core import attributes
 from kmip.core import enums
@@ -14,6 +14,7 @@ from kmip.core.messages import payloads
 
 import auth.auth as auth
 from common import DATA
+from common import NUM_THREADS
 from common import SIGNATURE_DATA
 from mock_hsm import MockHSM
 
@@ -27,10 +28,16 @@ class KMIPClient:
     """
     KMIPClient provides a simple interface for performing signing requests
     to a KMIPServer.
+
+    :param threaded: boolean indicating whether to perform several signing requests
+        concurrently using a thread pool
     """
 
-    def __init__(self):
+    def __init__(self, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
+        self.threaded = threaded
+        if threaded:
+            self.thread_pool = concurrent.futures.ThreadPoolExecutor(NUM_THREADS)
 
     def sign(self, num_signatures: int, batch_count: int) -> None:
         """
@@ -47,16 +54,32 @@ class KMIPClient:
             )
 
         self.log.debug(
-            f"Beginning signing operation with {num_signatures} messages "
-            f"and batch count {batch_count}"
+            f"Beginning {'threaded' if self.threaded else 'non-threaded'} signing "
+            f"operation with {num_signatures} messages and batch count {batch_count}"
         )
 
-        while num_signatures >= batch_count:
-            self._handle_request(batch_count)
-            num_signatures -= batch_count
+        if self.threaded:
+            futures = []
+            while num_signatures >= batch_count:
+                future = self.thread_pool.submit(self._handle_request, batch_count)
+                futures.append(future)
+                num_signatures -= batch_count
 
-        if num_signatures > 0:
-            self._handle_request(num_signatures)
+            if num_signatures > 0:
+                future = self.thread_pool.submit(self._handle_request, num_signatures)
+                futures.append(future)
+
+            concurrent.futures.wait(
+                futures, return_when=concurrent.futures.ALL_COMPLETED
+            )
+
+        else:
+            while num_signatures >= batch_count:
+                self._handle_request(batch_count)
+                num_signatures -= batch_count
+
+            if num_signatures > 0:
+                self._handle_request(num_signatures)
 
         self.log.debug("Signing operation complete")
 
@@ -89,7 +112,9 @@ class KMIPClient:
                         enums.Operation, enums.Operation.SIGN, tag=enums.Tags.OPERATION
                     ),
                     request_payload=payload,
-                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes(4)),
+                    unique_batch_item_id=contents.UniqueBatchItemID(
+                        item_no.to_bytes(4)
+                    ),
                 )
             )
 
@@ -154,11 +179,18 @@ class KMIPServer:
     KMIPServer handles signing requests from a KMIPClient.
 
     :param hsm: the MockHSM object to use to perform signing operations.
+    :threaded: a boolean indicating whether the server should create new
+        treads for incoming connections.
     """
 
-    def __init__(self, hsm: MockHSM):
+    def __init__(self, hsm: MockHSM, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
         self.hsm = hsm
+        self.threaded = threaded
+        if threaded:
+            if not self.hsm.thread_safe:
+                raise ValueError("Provided MockHSM must be thread safe")
+            self.thread_pool = concurrent.futures.ThreadPoolExecutor(NUM_THREADS)
 
     def serve(self):
         """
@@ -172,13 +204,17 @@ class KMIPServer:
             server_side=True,
             do_handshake_on_connect=True,
         )
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("localhost", KMIP_PORT_NUMBER))
         sock.listen()
         self.log.debug(f"Listening to localhost at port {KMIP_PORT_NUMBER}")
 
         while True:
             conn, _ = sock.accept()
-            self._handle_request(conn)
+            if self.threaded:
+                self.thread_pool.submit(self._handle_request, conn)
+            else:
+                self._handle_request(conn)
 
     @classmethod
     def decode_request(cls, data: bytes) -> messages.RequestMessage:
@@ -216,7 +252,9 @@ class KMIPServer:
                     response_payload=payloads.SignResponsePayload(
                         unique_identifier=KEY_ID, signature_data=SIGNATURE_DATA
                     ),
-                    unique_batch_item_id=contents.UniqueBatchItemID(item_no.to_bytes(4)),
+                    unique_batch_item_id=contents.UniqueBatchItemID(
+                        item_no.to_bytes(4)
+                    ),
                 )
             )
 

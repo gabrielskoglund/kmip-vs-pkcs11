@@ -4,14 +4,18 @@ import json
 import logging
 import socketserver
 import ssl
-from http import HTTPMethod
+from concurrent import futures
 from http import HTTPStatus
 from typing import Dict
 
+import httpx
+
 import auth.auth as auth
 from common import DATA
+from common import NUM_THREADS
 from common import SIGNATURE_DATA
 from common import PKCS11SessionStatus
+from mock_hsm import MockHSM
 
 REST_API_PORT = 50002
 
@@ -26,11 +30,14 @@ class PKCS11RESTClient:
     to a PKCS11RESTServer.
     """
 
-    def __init__(self):
+    def __init__(self, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.connection = http.client.HTTPSConnection(
-            "localhost", REST_API_PORT, context=self._get_ssl_context()
+        self.connection = httpx.Client(
+            verify=self._get_ssl_context(),
         )
+        self.threaded = threaded
+        if threaded:
+            self.thread_pool = futures.ThreadPoolExecutor(NUM_THREADS)
 
     def sign(self, num_signatures: int) -> None:
         """
@@ -40,39 +47,50 @@ class PKCS11RESTClient:
         :param num_signatures: the number of signatures to perform.
         """
         self.log.debug(f"Beginning signing operations for {num_signatures} signatures")
-        for i in range(num_signatures):
-            res = self._send_json(
-                {
-                    "session_handle": SESSION_HANDLE,
-                    "key_handle": KEY_HANDLE,
-                    "mechanism": "CKM_CKM_ECDSA_SHA256",
-                },
-                endpoint="sign_init",
-            )
-            assert res.status == HTTPStatus.OK
 
-            res = self._send_json(
-                {"session_handle": SESSION_HANDLE, "data": DATA.hex()}, endpoint="sign"
-            )
-            assert res.status == HTTPStatus.OK
+        if self.threaded:
+            fs = [
+                self.thread_pool.submit(self._sign_single, session_handle=i)
+                for i in range(num_signatures)
+            ]
+            futures.wait(fs, return_when=futures.ALL_COMPLETED)
+            assert all([f.exception() is None for f in fs])
 
-            # Read signature as if were going to use it
-            body = res.read()
-            _ = bytes.fromhex(json.loads(body).get("signature"))
-
-            self.log.debug("Successfully signed message")
+        else:
+            for i in range(num_signatures):
+                self._sign_single()
 
         self.log.debug("Signing operation complete")
 
-    def _send_json(self, data: Dict, endpoint: str) -> http.client.HTTPResponse:
-        json_data = json.dumps(data)
-        self.connection.request(
-            method=HTTPMethod.POST,
-            url=f"localhost:{REST_API_PORT}/{endpoint}",
-            body=json_data,
-            headers={"Content-type": "application/json"},
+    def _sign_single(self, session_handle: int = SESSION_HANDLE) -> None:
+        res = self._send_json(
+            {
+                "session_handle": session_handle,
+                "key_handle": KEY_HANDLE,
+                "mechanism": "CKM_CKM_ECDSA_SHA256",
+            },
+            endpoint="sign_init",
         )
-        return self.connection.getresponse()
+        assert res.status_code == HTTPStatus.OK
+
+        res = self._send_json(
+            {"session_handle": session_handle, "data": DATA.hex()}, endpoint="sign"
+        )
+        assert res.status_code == HTTPStatus.OK
+
+        # Read signature as if were going to use it
+        _ = bytes.fromhex(json.loads(res.content).get("signature"))
+
+        self.log.debug("Successfully signed message")
+
+    def _send_json(self, data: Dict, endpoint: str) -> httpx.Response:
+        json_data = json.dumps(data)
+        return self.connection.post(
+            url=f"https://localhost:{REST_API_PORT}/{endpoint}",
+            content=json_data,
+            headers={"Content-type": "application/json"},
+            timeout=None,
+        )
 
     def _get_ssl_context(self) -> ssl.SSLContext:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -90,6 +108,23 @@ class PKCS11RESTServer:
 
     :param hsm: The MockHSM to use for signing operations.
     """
+
+    class _ThreadingServer(socketserver.TCPServer):
+        """
+        _ThreadingServer is a TCP server which can proces multiple requests
+        concurrently.
+        """
+
+        def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
+            super().__init__(server_address, RequestHandlerClass, bind_and_activate)
+            self.thread_pool = futures.ThreadPoolExecutor(NUM_THREADS)
+
+        # Note: owerwriting this method is a bit strange, but simply using the
+        #       socketserver.ThreadingTCPServer would cause the requests to be
+        #       handled in a sequential fashion, only using a new thread
+        #       for each request.
+        def _handle_request_noblock(self):
+            self.thread_pool.submit(super()._handle_request_noblock)
 
     class _Handler(http.server.BaseHTTPRequestHandler):
         """
@@ -126,8 +161,11 @@ class PKCS11RESTServer:
 
         def _sign_init(self, request: Dict):
             session = request.get("session_handle")
-            if not session:
-                self._error("Missing request field: session_handle")
+            if session is None:
+                self.server.log.debug("Missing request field: session_handle")
+                self._error(
+                    HTTPStatus.BAD_REQUEST, "Missing request field: session_handle"
+                )
                 return
 
             if (
@@ -147,8 +185,11 @@ class PKCS11RESTServer:
 
         def _sign(self, request):
             session = request.get("session_handle")
-            if not session:
-                self._error("Missing request field: session_handle")
+            if session is None:
+                self.server.log.debug("Missing request field: session_handle")
+                self._error(
+                    HTTPStatus.BAD_REQUEST, "Missing request field: session_handle"
+                )
                 return
 
             if not (
@@ -162,6 +203,7 @@ class PKCS11RESTServer:
             # Decode the data as if we were going to sign it
             data = request.get("data")
             if not data:
+                self.server.log.debug("Missing request field: data")
                 self._error("Missing request field: data")
                 return
             _ = bytes.fromhex(data)
@@ -181,11 +223,20 @@ class PKCS11RESTServer:
             self.wfile.write(json.dumps({"error": msg}).encode("utf-8"))
             return
 
-    def __init__(self, hsm):
+    def __init__(self, hsm: MockHSM, threaded: bool = False):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.server = socketserver.TCPServer(
-            ("localhost", REST_API_PORT), self._Handler, bind_and_activate=False
-        )
+
+        if threaded:
+            if not hsm.thread_safe:
+                raise ValueError("Provided MockHSM must be thread safe")
+            self.server = self._ThreadingServer(
+                ("localhost", REST_API_PORT), self._Handler, bind_and_activate=False
+            )
+        else:
+            self.server = socketserver.TCPServer(
+                ("localhost", REST_API_PORT), self._Handler, bind_and_activate=False
+            )
+
         self.server.socket = self._get_ssl_context().wrap_socket(
             self.server.socket, server_side=True, do_handshake_on_connect=True
         )
