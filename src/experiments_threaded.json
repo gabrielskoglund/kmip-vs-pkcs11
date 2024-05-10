@@ -1,0 +1,171 @@
+{
+    "repeat": 10,
+    "shuffle": true,
+    "experiments": [
+        {
+            "api": "kmip",
+            "hsm_capacity": 100,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 1000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 1,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 100,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 1000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 10,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 100,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 1000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 10000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100,
+            "threaded": true
+        },
+        {
+            "api": "kmip",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
+            "kmip_batch_count": 100,
+            "threaded": true
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 100,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 1000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 10000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "grpc",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 100,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 1000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 5000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 10000,
+            "num_signatures": 1000,
+            "threaded": true
+        },
+        {
+            "api": "rest",
+            "hsm_capacity": 20000,
+            "num_signatures": 1000,
+            "threaded": true
+        }
+    ]
+}
