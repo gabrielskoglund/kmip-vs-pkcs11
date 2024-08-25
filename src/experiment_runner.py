@@ -130,7 +130,25 @@ class Experiment:
         }
 
         hsm = mock_hsm.MockHSM(self.hsm_capacity, thread_safe=self.threaded)
-        server = server_type[self.api](hsm, self.threaded)
+
+        # We sometimes get `OSError: [Errno 98] Address already in use`
+        # errors when trying to start the server, despite address reuse
+        # being allowed by the implementations. To work around this
+        # we use this rather ugly retry hack.
+        server = None
+        retries = 3
+        while retries > 0:
+            try:
+                server = server_type[self.api](hsm, self.threaded)
+                break
+            except OSError as e:
+                retries -= 1
+                print(f"Failed to start server: {e}. Sleeping and trying again")
+                time.sleep(10)
+
+        if server is None:
+            raise RuntimeError("Failed to start server after 3 retries")
+
         queue.put("ready")
         server.serve()
 
