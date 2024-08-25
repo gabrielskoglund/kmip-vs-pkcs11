@@ -14,7 +14,7 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [ python311 virtualenv ] ++
-            (with pkgs.python311Packages; [ pip ]);
+            (with pkgs.python311Packages; [ pip numpy ]);
           shellHook = with pkgs; ''
             export LD_LIBRARY_PATH=${lib.makeLibraryPath [stdenv.cc.cc]}
           '';
